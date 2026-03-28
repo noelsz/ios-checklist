@@ -1,4 +1,5 @@
 import AppIntents
+import WidgetKit
 
 struct ToggleTaskIntent: AppIntent {
     static var title: LocalizedStringResource = "Toggle Checklist Task"
@@ -18,6 +19,7 @@ struct ToggleTaskIntent: AppIntent {
             return .result()
         }
         TaskStore.shared.toggleCompleted(id: id)
+        WidgetCenter.shared.reloadAllTimelines()
         return .result()
     }
 }

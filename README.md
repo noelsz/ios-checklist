@@ -8,6 +8,21 @@ Minimalist iOS checklist app with:
 - Home Screen widget with direct completion toggles
 - Widget sections grouped by cadence (daily, weekly, monthly, one-time)
 
+## Critical identifiers (already aligned)
+
+These values are now consistent across:
+- app target bundle ID
+- widget target bundle ID
+- app and widget entitlements
+- shared persistence container lookup
+
+Current defaults:
+- App bundle ID: `com.noelsz.ioschecklist`
+- Widget bundle ID: `com.noelsz.ioschecklist.widget`
+- App Group: `group.com.noelsz.ioschecklist`
+
+If you change one, change all related values.
+
 ## Project structure
 
 - `project.yml` – XcodeGen spec for app + widget
@@ -15,6 +30,7 @@ Minimalist iOS checklist app with:
 - `Sources/App` – SwiftUI app
 - `Sources/Widget` – WidgetKit extension with interactive buttons
 - `Config` – app group entitlements
+- `Tests/SharedTests` – recurrence and persistence tests for shared store logic
 
 ## Build/run
 
@@ -25,26 +41,29 @@ Minimalist iOS checklist app with:
 3. Open `ChecklistApp.xcodeproj` in Xcode.
 4. Set a development team and run on iOS 17+ simulator/device.
 
-> App Group identifier is set to `group.com.example.ChecklistApp`.  
-> You can change bundle IDs and app-group values in `project.yml` and the entitlements files.
+## Reliability details
 
-## UX notes
+- Shared data is persisted in `tasks.json` inside the app group container.
+- If the app group container is unavailable (common in preview/misconfigured simulator), storage falls back to Documents.
+- Widget timelines are reloaded on every store write and after intent actions.
+- Progress resets are period-key based (daily/weekly/monthly keys), so no explicit destructive reset is needed.
+- Weekly keys use `Calendar.current` locale/week rules and `yearForWeekOfYear + weekOfYear`.
+- Progress is intentionally allowed to exceed target (e.g. `6/5`) for over-completion tracking.
 
-- Typography uses SF (`.headline`, `.subheadline`, `.caption`) and restrained spacing for a minimal look.
-- The app surfaces recurrence sections and progress bars to make daily/weekly/monthly goals visible at a glance.
-- Widget allows direct progress updates without opening the app.
+## Manual verification checklist
 
-## Clarifications needed for final product decisions
+1. Add task in app → force quit app → relaunch → task remains.
+2. Add/complete task in app → widget updates quickly.
+3. Complete task from widget → app reflects completion.
+4. Daily task around midnight boundary uses a new day bucket.
+5. Weekly task aligns to device locale week settings.
+6. Edge cases:
+   - progress can exceed target (e.g., 6/5)
+   - deleting tasks removes them from widget
+   - empty state view appears with no tasks
+   - many tasks still grouped by recurrence in list/widget
 
-To tailor this exactly to your workflow, I still need your preferences on:
+## XcodeGen signing note
 
-1. **Progress units**: free text per task (ml, times, pages) vs predefined unit list?
-2. **Auto-reset behavior**:
-   - Should daily/weekly/monthly progress reset automatically when a new period begins? (currently yes)
-   - Should completing a target lock the task for the rest of the period, or still allow over-completion?
-3. **Widget prioritization**:
-   - Should widget show only active tasks due today/current week/month, or all tasks in each section?
-4. **Checklist notes format**:
-   - Plain text notes per task (current), or nested sub-checklist items inside a task?
-5. **Sorting defaults**:
-   - By recurrence then title (current), or custom manual order?
+`xcodegen generate` can reset per-user signing settings in Xcode project state.
+If that happens, re-select your Team and signing profile in Xcode for both app and widget targets.
